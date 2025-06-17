@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "433397743399",
+    "project_id": "sql-ketcher-studio-app",
+    "storage_bucket": "sql-ketcher-studio-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:433397743399:android:358b790aac4eb88bd9f302",
+        "android_client_info": {
+          "package_name": "com.charlesco.sqlsketcherstudio"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3mjVu9FRovqpWbPjabHBGGtHAa0XKl5A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
