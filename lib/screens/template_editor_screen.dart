@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/schema_provider.dart';
+import '../providers/sql_provider.dart';
 import '../models/table_model.dart';
 import '../widgets/table_editor.dart';
 import '../utils/sql_generator.dart';
@@ -57,14 +58,37 @@ class TemplateEditorScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: const Color(0xFF2256A3),
         foregroundColor: Colors.white,
-        title: const Text('Edit Tables', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text('Editar Tablas', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         elevation: 0.5,
         shadowColor: Colors.black12,
+        actions: [
+          TextButton(
+            onPressed: () {
+              // Limpiar el SQL generado antes de navegar
+              Provider.of<SqlProvider>(context, listen: false).clear();
+              Navigator.pushNamed(context, '/sql-generation', arguments: schemaProvider.tables);
+            },
+            child: const Row(
+              children: [
+                Text(
+                  'Continuar',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(width: 4),
+                Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+              ],
+            ),
+          ),
+        ],
       ),
       backgroundColor: const Color(0xFFF7F9FB),
       body: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+        padding: const EdgeInsets.fromLTRB(10, 16, 10, 80), // Padding for FAB
         itemCount: schemaProvider.tables.length,
         itemBuilder: (context, tableIndex) {
           final table = schemaProvider.tables[tableIndex];
@@ -79,56 +103,15 @@ class TemplateEditorScreen extends StatelessWidget {
           );
         },
       ),
-      floatingActionButton: Align(
-        alignment: Alignment.bottomLeft,
-        child: Padding(
-          padding: const EdgeInsets.only(left: 24, bottom: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2256A3),
-                  elevation: 2,
-                  minimumSize: const Size(240, 60),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: Color(0xFF2256A3), width: 1.5),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                ),
-                icon: const Icon(Icons.arrow_forward, size: 26),
-                label: const Text('Dirigirse a SQL', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/sql-generation', arguments: schemaProvider.tables);
-                },
-              ),
-              const SizedBox(height: 18),
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2256A3),
-                  elevation: 2,
-                  minimumSize: const Size(240, 60),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    side: const BorderSide(color: Color(0xFF2256A3), width: 1.5),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                ),
-                icon: const Icon(Icons.add, size: 26),
-                label: const Text('Agregar tabla', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
-                onPressed: () {
-                  schemaProvider.addTable(
-                    TableModel(tableName: '', columns: [ColumnModel(name: '', type: 'TEXT')]),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          schemaProvider.addTable(
+            TableModel(tableName: '', columns: [ColumnModel(name: '', type: 'TEXT')]),
+          );
+        },
+        backgroundColor: const Color(0xFF2256A3),
+        tooltip: 'Agregar Tabla',
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

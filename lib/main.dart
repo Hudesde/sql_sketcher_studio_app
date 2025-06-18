@@ -34,10 +34,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Configurar la clave de API en SqlProvider
-    final sqlProvider = Provider.of<SqlProvider>(context, listen: false);
-    sqlProvider.apiKey = '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';
-
+    // Ya no se debe configurar la API Key aquí, ahora se solicita en el login
     return MaterialApp(
       title: 'SQL Sketcher Studio',
       theme: ThemeData(

@@ -16,7 +16,6 @@ class _HomeScreenState extends State<HomeScreen> {
   static const List<String> _routes = [
     '/',
     '/template-editor',
-    '/sql-generation',
     '/history',
   ];
 
@@ -45,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
           const Padding(
             padding: EdgeInsets.fromLTRB(24, 32, 24, 16),
             child: Text(
-              'Choose a Template',
+              'Elige una Plantilla',
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
           ),
@@ -103,7 +102,6 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Plantillas'),
           BottomNavigationBarItem(icon: Icon(Icons.table_chart), label: 'Editor'),
-          BottomNavigationBarItem(icon: Icon(Icons.code), label: 'SQL'),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Historial'),
         ],
         type: BottomNavigationBarType.fixed,

@@ -32,6 +32,13 @@ class _SqlGenerationScreenState extends State<SqlGenerationScreen> {
     super.initState();
     final apiKey = Provider.of<SqlProvider>(context, listen: false).apiKey;
     openAIService = OpenAIService(apiKey: apiKey);
+    // Generar SQL automáticamente al entrar en la pantalla si no hay código previo
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final sqlProvider = Provider.of<SqlProvider>(context, listen: false);
+      if (sqlProvider.sqlCode.isEmpty) {
+        _generateSQL(context);
+      }
+    });
   }
 
   Future<void> _generateSQL(BuildContext context) async {
@@ -56,13 +63,11 @@ class _SqlGenerationScreenState extends State<SqlGenerationScreen> {
 
     try {
       if (kIsWeb) {
-        // Para web: usar la función de descarga web
         download.downloadFile(sqlProvider.sqlCode, 'generated_sql.sql');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('¡Archivo SQL descargado con éxito!')),
         );
       } else {
-        // Para móvil: guardar en documentos y mostrar ubicación
         final directory = await getApplicationDocumentsDirectory();
         final file = File('${directory.path}/generated_sql.sql');
         await file.writeAsString(sqlProvider.sqlCode);
@@ -90,96 +95,63 @@ class _SqlGenerationScreenState extends State<SqlGenerationScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.blueAccent, Colors.lightBlueAccent],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 8,
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Guardar en Historial',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2256A3),
                 ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 16),
+              const Text(
+                'Asigna un nombre para este SQL:',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  labelText: 'Nombre del Historial',
+                  hintText: 'Ej: Esquema de usuarios',
+                ),
+                autofocus: true,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  Text(
-                    'Guardar en el historial',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancelar'),
                   ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Asigna un nombre para este SQL:',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (nameController.text.trim().isNotEmpty) {
+                        Navigator.pop(context, nameController.text.trim());
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2256A3),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white70),
-                      ),
-                      hintText: 'Ejemplo: Esquema de gestión de usuarios',
-                      hintStyle: TextStyle(color: Colors.grey),
-                    ),
-                    autofocus: true,
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: Text('Cancelar', style: TextStyle(color: Colors.white)),
-                      ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () {
-                          final name = nameController.text.trim();
-                          if (name.isEmpty) {
-                            return;
-                          }
-                          Navigator.pop(context, name);
-                        },
-                        child: Text('Guardar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.blueAccent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                    ],
+                    child: const Text('Guardar'),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -187,7 +159,6 @@ class _SqlGenerationScreenState extends State<SqlGenerationScreen> {
     
     if (result != null && result.isNotEmpty) {
       try {
-        // Guardar SQL y estructura de tablas en la misma entrada
         final schemaProvider = Provider.of<SchemaProvider>(context, listen: false);
         final tables = schemaProvider.tables.map((table) => {
           'name': table.tableName,
@@ -200,23 +171,17 @@ class _SqlGenerationScreenState extends State<SqlGenerationScreen> {
           result,
           sqlProvider.sqlCode,
           tables,
-          editorContent: schemaProvider.editorContent,
+          editorContent: sqlProvider.sqlCode, // Guardar el contenido del editor
         );
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('¡Guardado en el historial con éxito!'),
-              backgroundColor: Colors.green,
-            ),
+            const SnackBar(content: Text('Guardado en el historial con éxito')),
           );
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al guardar en el historial: $e'),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text('Error al guardar en el historial: $e')),
           );
         }
       }
@@ -225,188 +190,111 @@ class _SqlGenerationScreenState extends State<SqlGenerationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-    final schemaProvider = Provider.of<SchemaProvider>(context);
-    final sqlProvider = Provider.of<SqlProvider>(context);
+    final sqlProvider = context.watch<SqlProvider>();
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF2256A3),
         foregroundColor: Colors.white,
-        title: const Text('Generate SQL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text('Generador de SQL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         elevation: 0.5,
         shadowColor: Colors.black12,
         actions: [
-          if (user != null)
-            IconButton(
-              tooltip: 'Logout',
-              icon: const Icon(Icons.logout, color: Colors.white),
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-                if (context.mounted) {
-                  Navigator.pushReplacementNamed(context, '/login');
-                }
-              },
-            ),
           IconButton(
-            tooltip: 'History',
-            icon: const Icon(Icons.history, color: Colors.white),
+            icon: const Icon(Icons.history, size: 28),
+            tooltip: 'Ver Historial',
             onPressed: () => Navigator.pushNamed(context, '/history'),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       backgroundColor: const Color(0xFFF7F9FB),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (schemaProvider.tables.isNotEmpty)
-              Card(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Tables:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const SizedBox(height: 8),
-                      ...schemaProvider.tables.map((t) => Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          '- ${t.tableName.isEmpty ? '(unnamed)' : t.tableName}',
-                          style: const TextStyle(fontSize: 15, color: Colors.black87),
-                        ),
-                      )),
-                    ],
-                  ),
-                ),
-              ),
-            const SizedBox(height: 18),
-            Center(
-              child: SizedBox(
-                width: double.infinity,
-                child: BlurredBlueButton(
-                  child: _loading
-                      ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Generate SQL'),
-                  onPressed: _loading ? null : () => _generateSQL(context),
-                  height: 48,
-                  borderRadius: 10,
-                  borderColor: const Color(0xFF2256A3),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            if (_error != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(_error!, style: const TextStyle(color: Colors.red)),
-              ),
-            Expanded(
-              child: Card(
-                color: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 1,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Expanded(
-                        child: SingleChildScrollView(
-                          child: SelectableText(
-                            sqlProvider.sqlCode.isEmpty ? 'SQL code will appear here.' : sqlProvider.sqlCode,
-                            style: const TextStyle(fontFamily: 'monospace', fontSize: 15, color: Colors.black87),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                spreadRadius: 1,
+                                blurRadius: 3,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: SingleChildScrollView(
+                            child: SelectableText(
+                              sqlProvider.sqlCode,
+                              style: const TextStyle(fontFamily: 'monospace', fontSize: 15),
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 20),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          IconButton(
-                            tooltip: 'Copy',
-                            icon: const Icon(Icons.copy_rounded, color: Color(0xFF2256A3)),
-                            onPressed: sqlProvider.sqlCode.isEmpty ? null : () async {
-                              await Clipboard.setData(ClipboardData(text: sqlProvider.sqlCode));
-                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+                          _buildActionButton(
+                            context,
+                            icon: Icons.copy,
+                            label: 'Copiar',
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: sqlProvider.sqlCode));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('SQL copiado al portapapeles')),
+                              );
                             },
                           ),
-                          IconButton(
-                            tooltip: 'Download SQL',
-                            icon: const Icon(Icons.download_rounded, color: Color(0xFF2256A3)),
-                            onPressed: sqlProvider.sqlCode.isEmpty ? null : () => _downloadSQL(context),
+                          _buildActionButton(
+                            context,
+                            icon: Icons.download,
+                            label: 'Descargar',
+                            onPressed: () => _downloadSQL(context),
                           ),
-                          IconButton(
-                            tooltip: 'Share',
-                            icon: const Icon(Icons.share_rounded, color: Color(0xFF2256A3)),
-                            onPressed: sqlProvider.sqlCode.isEmpty ? null : () async {
-                              if (kIsWeb) {
-                                // En web, solo copiamos al portapapeles
-                                await Clipboard.setData(ClipboardData(text: sqlProvider.sqlCode));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('SQL copied to clipboard for sharing'))
-                                );
-                              } else {
-                                // En móvil, compartimos el archivo
-                                try {
-                                  final directory = await getTemporaryDirectory();
-                                  final file = File('${directory.path}/generated.sql');
-                                  await file.writeAsString(sqlProvider.sqlCode);
-                                  await Share.shareXFiles([XFile(file.path)], text: 'SQL generated with SQL Sketcher');
-                                } catch (e) {
-                                  // Si falla, copiamos al portapapeles como fallback
-                                  await Clipboard.setData(ClipboardData(text: sqlProvider.sqlCode));
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('SQL copied to clipboard'))
-                                  );
-                                }
-                              }
-                            },
-                          ),
-                          IconButton(
-                            tooltip: 'Save to history',
-                            icon: const Icon(Icons.bookmark_add, color: Color(0xFF2256A3)),
-                            onPressed: sqlProvider.sqlCode.isEmpty ? null : () => _saveToHistory(context),
+                          _buildActionButton(
+                            context,
+                            icon: Icons.save,
+                            label: 'Guardar',
+                            onPressed: () => _saveToHistory(context),
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            // Tarjetas de presets
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: schemaProvider.tables.map((table) {
-                  return Card(
-                    margin: const EdgeInsets.all(8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Text(table.tableName),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ],
+    );
+  }
+
+  Widget _buildActionButton(BuildContext context, {required IconData icon, required String label, required VoidCallback onPressed}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ElevatedButton(
+          onPressed: onPressed,
+          style: ElevatedButton.styleFrom(
+            shape: const CircleBorder(),
+            padding: const EdgeInsets.all(20),
+            backgroundColor: const Color(0xFF2256A3),
+            foregroundColor: Colors.white,
+            elevation: 3,
+          ),
+          child: Icon(icon, size: 28),
         ),
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 24, right: 24),
-        child: FloatingActionButton.extended(
-          onPressed: () => Navigator.pushNamed(context, '/history'),
-          icon: const Icon(Icons.history, color: Colors.white),
-          label: const Text('Historial', style: TextStyle(color: Colors.white)),
-          backgroundColor: const Color(0xFF2256A3),
-          elevation: 4,
-        ),
-      ),
+        const SizedBox(height: 8),
+        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+      ],
     );
   }
 }

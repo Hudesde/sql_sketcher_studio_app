@@ -20,9 +20,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF2256A3),
         foregroundColor: Colors.white,
-          title: const Text('Historial de SQL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        title: const Text('Historial de SQL', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
         centerTitle: true,
         elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.home, color: Colors.white),
+          tooltip: 'Ir a inicio',
+          onPressed: () {
+            Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+          },
+        ),
         actions: [
           if (user != null)
             IconButton(

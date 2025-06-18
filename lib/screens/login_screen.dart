@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/sql_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -11,6 +13,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _apiKeyController = TextEditingController();
   String? _error;
   bool _loading = false;
   bool _isLogin = true;
@@ -23,14 +26,18 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+    if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty || _apiKeyController.text.trim().isEmpty) {
       setState(() {
-        _error = 'Por favor ingresa correo y contraseña.';
+        _error = 'Por favor ingresa correo, contraseña y API Key.';
       });
       return;
     }
     setState(() { _loading = true; _error = null; });
     try {
+      // Guardar la API Key en el provider global
+      final sqlProvider = Provider.of<SqlProvider>(context, listen: false);
+      sqlProvider.apiKey = _apiKeyController.text.trim();
+
       if (_isLogin) {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: _emailController.text.trim(),
@@ -50,6 +57,22 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       setState(() { _loading = false; });
     }
+  }
+
+  void _showDeveloperInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Acerca del Desarrollador'),
+        content: const Text('Esta aplicación fue desarrollada por:\n\nJosé Ramón Aragón Toledo'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -82,12 +105,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
-                      'SQL Sketcher Studio',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2256A3),
+                    GestureDetector(
+                      onLongPress: () => _showDeveloperInfoDialog(context),
+                      child: const Text(
+                        'SQL Sketcher Studio',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2256A3),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -121,6 +147,21 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: 'Contraseña',
                         prefixIcon: const Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[50],
+                      ),
+                      obscureText: true,
+                      onSubmitted: (_) => _submit(),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _apiKeyController,
+                      decoration: InputDecoration(
+                        labelText: 'API Key de OpenAI',
+                        prefixIcon: const Icon(Icons.vpn_key),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
